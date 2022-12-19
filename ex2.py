@@ -220,7 +220,7 @@ class OptimalTaxiAgent:
             3. caculating the prob to get to each state, according to the passengers
                probs to change goal destination.
         """
-        new_state = self.result(state, action)
+        # new_state = self.result(state, action)
 
         pass
 
@@ -302,7 +302,7 @@ class OptimalTaxiAgent:
 
         # get all states resulting from the all the actions
         # but now the passengers can change their destination --> stochastic
-        stochastic_action_result_state_tuples = []
+        # stochastic_action_result_state_tuples = []
         all_passengers_subsets = powerset(state["passengers"].keys())
         for pass_subset in all_passengers_subsets:
             # only the subset are changing their destinations
