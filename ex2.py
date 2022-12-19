@@ -5,7 +5,6 @@ from typing import Tuple
 
 # import networkx as nx
 import numpy as np
-from torch.distributed.pipeline.sync.skip import pop
 
 from utils import orientations, powerset, vector_add
 
@@ -362,10 +361,7 @@ class OptimalTaxiAgent:
             map_matrix = state["map"]
             x, y = taxi_dict["location"]  # current location of taxi
             # check that the location on map is "G"
-            try:
-                legal_refuel = map_matrix[x][y] == "G"  # bool
-            except Exception as e:
-                print()
+            legal_refuel = map_matrix[x][y] == "G"  # bool
             legal_refuels_by_taxi[taxi_name] = legal_refuel
         return legal_refuels_by_taxi
 
