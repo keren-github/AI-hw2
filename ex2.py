@@ -23,7 +23,7 @@ class OptimalTaxiAgent:
         # we shouldnt add anything to th states! because we get the state from user in "act" func
         self.max_turns_to_go = initial["turns to go"]
 
-        self.all_possible_states = self.get_all_possible_states()
+        self.all_possible_states = self.set_all_possible_states()
         self.all_possible_actions = []  # list [a1, a2, ...]
         self.all_possible_actions_for_state = {}  # dict {state: a1, a2, ...}
 
