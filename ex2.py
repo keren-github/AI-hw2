@@ -23,20 +23,19 @@ class OptimalTaxiAgent:
         # we shouldnt add anything to th states! because we get the state from user in "act" func
         self.max_turns_to_go = initial["turns to go"]
 
-        self.all_possible_states = (
-            self.get_all_possible_states()
-        )  # list [state1, state2, ...]
+        self.all_possible_states = self.get_all_possible_states()
         self.all_possible_actions = []  # list [a1, a2, ...]
         self.all_possible_actions_for_state = {}  # dict {state: a1, a2, ...}
 
+        # for Value Iteration
         self.Next_States_Probs = {}
         self.Rewards = {}
-        self.Values = {}
         self.Actions_Values = {}
+        self.Values = {}
         self.Best_Actions = {}
 
         self.set_all_possible_states()
-        self.build_states_and_actions_lists_dicts()
+        self.set_all_possible_actions_and_next_states()
         self.value_iteration_with_dicts()
 
     def act(self, state: dict):
@@ -172,7 +171,7 @@ class OptimalTaxiAgent:
             )
         return all_legal_locations_by_passenger
 
-    def build_states_and_actions_lists_dicts(self):
+    def set_all_possible_actions_and_next_states(self):
         """
         Update:
         @ list: self.all_possible_actions_for_state
