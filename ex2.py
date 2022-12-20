@@ -59,7 +59,7 @@ class OptimalTaxiAgent:
         optimal = self.initial["optimal"]
         game_map = self.initial["map"]
         taxis_init = self.initial["taxis"]
-        passengers_init = self.initial["taxis"]
+        passengers_init = self.initial["passengers"]
         all_taxis_permutations = self.get_all_possible_taxis_dicts(taxis_init, game_map)
         all_passengers_permutations = self.get_all_possible_passengers_dicts(
             passengers_init, taxis_init
@@ -67,7 +67,11 @@ class OptimalTaxiAgent:
 
         all_possible_states = []
         for taxis_option in all_taxis_permutations:
+            if len(taxis_option) == 1:
+                taxis_option = taxis_option[0]
             for passengers_option in all_passengers_permutations:
+                if len(passengers_option) == 1:
+                    passengers_option = passengers_option[0]
                 # create state dict
                 state = {
                     "optimal": optimal,
@@ -86,7 +90,7 @@ class OptimalTaxiAgent:
         all_options_by_taxi = {}
         # taxi possible locations is the same for all taxis
         possible_locations = self.get_all_legal_taxis_locations(game_map)
-        for taxi_name, taxi_details in taxis_init.keys():
+        for taxi_name, taxi_details in taxis_init.items():
             all_options_by_taxi[taxi_name] = []
             possible_fuel_vals = range(taxi_details["fuel"] + 1)
             possible_cacpacity_vals = range(taxi_details["capacity"] + 1)
@@ -100,14 +104,14 @@ class OptimalTaxiAgent:
                                 "capacity": capacity_value,
                             }
                         }
-                        all_options_by_taxi.append(taxi_state)
+                        all_options_by_taxi[taxi_name].append(taxi_state)
 
         # Get all permutations of taxis dicts (permutation contains one dict of each taxi)
         taxis_options_lists = list(all_options_by_taxi.values())
         all_taxis_permutations = list(itertools.product(*taxis_options_lists))
         return all_taxis_permutations
 
-    def get_all_legal_taxis_locations(game_map):
+    def get_all_legal_taxis_locations(self, game_map):
         """
         taxi location is any location on game_map that is not "I"
         """
@@ -130,7 +134,7 @@ class OptimalTaxiAgent:
         all_legal_locations_by_passenger = self.get_all_legal_locations_by_passenger(
             passengers_init, taxis_init
         )
-        for passenger_name, passenger_details in passengers_init.keys():
+        for passenger_name, passenger_details in passengers_init.items():
             all_options_by_passenger[passenger_name] = []
             possible_locations = all_legal_locations_by_passenger[passenger_name]
             possible_destinations = passenger_details["possible_goals"]
@@ -147,14 +151,14 @@ class OptimalTaxiAgent:
                             "prob_change_goal": prob_change_goal,
                         }
                     }
-                    all_options_by_passenger.append(passenger_state)
+                    all_options_by_passenger[passenger_name].append(passenger_state)
 
         # Get all permutations of passengers dicts (permutation contains one dict of each passenger)
         passengers_options_lists = list(all_options_by_passenger.values())
         all_passengers_permutations = list(itertools.product(*passengers_options_lists))
         return all_passengers_permutations
 
-    def get_all_legal_locations_by_passenger(passengers_init, taxis_init):
+    def get_all_legal_locations_by_passenger(self, passengers_init, taxis_init):
         """
         passenger location is on of the following:
             1. the initialized location of this passenger
@@ -163,7 +167,7 @@ class OptimalTaxiAgent:
         """
         taxis_names = list(taxis_init.keys())
         all_legal_locations_by_passenger = {}
-        for curr_passenger, passengers_dict in passengers_init.keys():
+        for curr_passenger, passengers_dict in passengers_init.items():
             init_location = list(passengers_dict["location"])
             possible_goals = list(passengers_dict["possible_goals"])
             all_legal_locations_by_passenger[curr_passenger] = (
@@ -190,7 +194,7 @@ class OptimalTaxiAgent:
                 if action not in self.all_possible_actions:
                     self.all_possible_actions.append(action)
                 next_states_with_probs = self.result_with_probs(state, action)
-                for next_state, prob in next_states_with_probs:
+                for next_state, prob in next_states_with_probs.items():
                     self.Next_States_Probs[(state, action)] = (next_state, prob)
 
     def result_with_probs(self, state, action):
@@ -208,7 +212,7 @@ class OptimalTaxiAgent:
                 3c. For each permutation get new state with updated destinations
 
         """
-        possible_next_state_and_probs = []
+        possible_next_state_probs = {}
         # 1. Use the detrministic result function to get the next "regular" state.
         result_state = self.result(state, action)
 
@@ -249,7 +253,15 @@ class OptimalTaxiAgent:
                     new_state["passengers"].items()
                 ):
                     pass_details["destination"] = destinations_permutation[i]
-                possible_next_state_and_probs.append((new_state, new_state_prob))
+                if new_state in possible_next_state_probs.keys():  # sum probs
+                    existing_prob = possible_next_state_probs[new_state]
+                    additional_prob = new_state_prob
+                    possible_next_state_probs[new_state] = (
+                        existing_prob + additional_prob
+                    )
+                else:
+                    possible_next_state_probs[new_state] = new_state
+        return possible_next_state_probs
 
     def value_iteration_with_dicts(self):
         """
@@ -641,4 +653,4 @@ if __name__ == "__main__":
     }
     agent = OptimalTaxiAgent(initial=state)
     # agent.actions({"bla": "bla"})
-    agent.get_all_possible_states
+    # agent.set_all_possible_states()
