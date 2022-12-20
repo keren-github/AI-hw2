@@ -21,41 +21,23 @@ class OptimalTaxiAgent:
     def __init__(self, initial: dict):
         self.initial = initial
         # we shouldnt add anything to th states! because we get the state from user in "act" func
-        # self.states_graph = nx.DiGraph()
-        # self.index_to_state = dict()
-        # self.state_to_index = dict()
-        # self.num_states = None
-        # self.num_actions = None
         self.max_turns_to_go = initial["turns to go"]
 
-        self.all_possible_states = []  # list [state1, state2, ...]
+        self.all_possible_states = (
+            self.get_all_possible_states()
+        )  # list [state1, state2, ...]
         self.all_possible_actions = []  # list [a1, a2, ...]
-        self.all_possible_states_actions_tuples = []  # list [(s1, a2), (s2, a4) ...]
         self.all_possible_actions_for_state = {}  # dict {state: a1, a2, ...}
 
         self.Next_States_Probs = {}
-        # @ Next_States_Probs: dict {(s0, a1): (s1, p1), (s2, p2)}
         self.Rewards = {}
-        # @ Rewards: dict {(action): reward}  # depends only on action!!
         self.Values = {}
-        # @ Values          {t:
-        #                      {state0: value,
-        #                       state1: value}
-        #                   }
         self.Actions_Values = {}
-        # @ Actions_Values {t:
-        #                      {state0:
-        #                           {action1): value,
-        #                           (action2): value}
-        #                      {state1}:
-        #                           {(action1): value,
-        #                           (action2): value}
-        #                   }
         self.Best_Actions = {}
-        # @ Best_Actions: dict {t:
-        #                          {state0: best_action,
-        #                           state1, best_action}
-        #                       }
+
+        self.set_all_possible_states()
+        self.build_states_and_actions_lists_dicts()
+        self.value_iteration_with_dicts()
 
     def act(self, state: dict):
         """
@@ -67,7 +49,7 @@ class OptimalTaxiAgent:
         best_action = self.best_actions[(state_without_t, t)]
         return best_action
 
-    def get_all_possible_states(self):
+    def set_all_possible_states(self):
         """
         Get all possible permutations of states
         Retruns list of states as json strings.
@@ -190,21 +172,24 @@ class OptimalTaxiAgent:
             )
         return all_legal_locations_by_passenger
 
-    def get_Next_States_Probs_dict(self):
+    def build_states_and_actions_lists_dicts(self):
         """
-        for each possible state, checks the possible next states with each action
-        and the probabilty to get to this next step.
-        Returnes:
-        denote s as state, a as action
-        {(s0, a1): (s1, p1), (s2, p2,, (s3, p3))}
+        Update:
+        @ list: self.all_possible_actions_for_state
+        @ list: self.all_possible_actions
+        @ dict: self.Next_States_Probs {(state0, action1):
+                                            [(state1, prob1), (state2, prob2)]}
+                For each possible state, checks the possible next states
+                with each action and the probabilty to get to this next step.
         """
-        for state in self.get_all_possible_states:
+        for state in self.all_possible_states:
             legal_actions = self.actions(state)
+            legal_actions.append("reset")
+            legal_actions.append("terminate")
             self.all_possible_actions_for_state[state] = legal_actions
             for action in legal_actions:
                 if action not in self.all_possible_actions:
                     self.all_possible_actions.append(action)
-                self.all_possible_states_actions_tuples.append(state, action)
                 next_states_with_probs = self.result_with_probs(state, action)
                 for next_state, prob in next_states_with_probs:
                     self.Next_States_Probs[(state, action)] = (next_state, prob)
@@ -212,25 +197,87 @@ class OptimalTaxiAgent:
     def result_with_probs(self, state, action):
         """
         input: state, action
-        ouptpu: next possible states and the probablilty for each one
+        output: next possible states and the probablilty for each one
         method:
-            1. uses the detrministicc result function to get the next "regular" state.
-            2. expands the new state to  afew new states considering all
-               possible changes in passengers destinations.
-            3. caculating the prob to get to each state, according to the passengers
-               probs to change goal destination.
-        """
-        # new_state = self.result(state, action)
+            1.  Use the detrministic result function to get the next "regular" state.
+            2.  Get Changes Probabilties per passnger
+            3.  Get all possible new states with possible changes of destinations
+                3a. Get new_state prob and possible destinations
+                    where ths subset passengers may change their destination
+                3b. Get all destinations permutations
+                    (passengers have few possible goals to change to)
+                3c. For each permutation get new state with updated destinations
 
-        pass
+        """
+        possible_next_state_and_probs = []
+        # 1. Use the detrministic result function to get the next "regular" state.
+        result_state = self.result(state, action)
+
+        # 2. Get Changes Probabilties per passnger
+        probs_by_pass = {}
+        for pass_name, pass_details in result_state["passengers"].items():
+            possible_goals = pass_details["possible_goals"]
+            # prob_change_goal is to rechoice goal from possible goals uniformic.
+            prob_rechoice_goal = pass_details["prob_change_goal"]
+            prob_not = 1 - prob_rechoice_goal
+            probs_by_pass[pass_name] = (prob_rechoice_goal, prob_not)
+
+        # 3. Get all possible new states with possible changes of destinations
+        all_passengers_subsets = powerset(state["passengers"].keys())
+        all_passengers_subsets.append([])  # no passenger is rechoicing his destination
+        # TODO: debug and make sure the loop doesnt skip the empty list
+        for pass_subset_names in all_passengers_subsets:
+            # 3a. Get new_state prob and possible destinations
+            #     where ths subset passengers may change their destination
+            new_state_prob = 1  # init prob
+            possible_destinations_lists = []
+            for pass_name, prob_rechoice_goal, prob_not in probs_by_pass.items():
+                if pass_name in pass_subset_names:  # passenger rechoice destination
+                    new_state_prob *= prob_rechoice_goal
+                    possible_goals = list(result_state["passengers"]["possible_goals"])
+                else:
+                    new_state_prob *= prob_not
+                    possible_goals = result_state["passengers"]["destination"]
+                possible_destinations_lists.append(possible_goals)
+            # 3b. Get all destinations permutations
+            all_destinations_permu = list(
+                itertools.product(*possible_destinations_lists)
+            )
+            # 3c. For each permutation get new state with updated destinations
+            for destinations_permutation in all_destinations_permu:
+                new_state = result_state.copy()
+                for i, pass_name, pass_details in enumerate(
+                    new_state["passengers"].items()
+                ):
+                    pass_details["destination"] = destinations_permutation[i]
+                possible_next_state_and_probs.append((new_state, new_state_prob))
 
     def value_iteration_with_dicts(self):
         """
-        get the best action for each step t
+        Get the best action for each step t
         from t = 0 to t = max_t.
-        updating self.best_actions dict.
-
-        method: running value iteration algorithm.
+        Update self.Best_Actions dict.
+        Method: running value iteration algorithm.
+        Using:
+        @ Next_States_Probs: dict {(state0, action1):
+                                    [(state1, prob1), (state2, prob2)]}
+        @ Rewards: dict {(action): reward}  # depends only on action!!
+        @ Actions_Values    {t:
+                                {state0:
+                                    {(action1): value,
+                                     (action2): value}
+                                {state1}:
+                                    {(action1): value,
+                                     (action2): value}
+                            }
+        @ Best_Actions:     {t:
+                                {state0: best_action,
+                                 state1: best_action}
+                            }
+        @ Values            {t:
+                                {state0: best_value,
+                                 state1: best_value}
+                            }
         """
         for t in range(self.max_turns_to_go):
             if t == 0:
@@ -247,7 +294,7 @@ class OptimalTaxiAgent:
                         for next_state, prob in self.Next_States_Probs[(state, action)]:
                             value_of_action += prob * self.Values[t - 1][next_state]
                         self.Actions_Values[t][state][action] = value_of_action
-                    # Find - best action and value
+                    # Find - best action and best value
                     possible_actions = self.Actions_Values[t][state].keys()
                     possible_values = self.Actions_Values[t][state].values()
                     best_value = np.max(possible_values)
@@ -272,44 +319,6 @@ class OptimalTaxiAgent:
                         reward -= REFUEL_PENALTY
 
             self.Rewards[action] = reward
-
-    def set_all_possible_next_states_and_probs(self, state):
-        """
-        building the networkx digraph: its actually a tree
-            nodes:
-                - have the states
-                - have the multiplier:
-            edges:
-                - have the weights: -100 for
-        """
-        # get all actions like in HW 1 + terminate + reset
-        actions = self.actions(state)
-
-        # get all states resulting from the all actions --> deterministic
-        deterministic_act_state_prob_tuples = []
-        for act in actions:
-            result_state = self.result(state, act)
-            probs_to_not_change_goal = np.prod(
-                [
-                    1 - pass_dict["prob_change_goal"]
-                    for pass_dict in state["passengers"].values()
-                ]
-            )
-
-            deterministic_act_state_prob_tuples.append(
-                (act, result_state, probs_to_not_change_goal)
-            )
-
-        # get all states resulting from the all the actions
-        # but now the passengers can change their destination --> stochastic
-        # stochastic_action_result_state_tuples = []
-        all_passengers_subsets = powerset(state["passengers"].keys())
-        for pass_subset in all_passengers_subsets:
-            # only the subset are changing their destinations
-            # add (action, next_state) tuples to stochastic_action_result_state_tuples
-            # also need to add to state what is the probability to get there
-            for act, state, prob in deterministic_act_state_prob_tuples:
-                ...  # TODO
 
     def get_gas_station_list(self, map, h, w):
         g_list = []
