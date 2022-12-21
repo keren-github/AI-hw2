@@ -226,6 +226,8 @@ class OptimalTaxiAgent:
             self.all_possible_actions_for_state[state] = legal_actions
             if len(legal_actions) == 0:
                 continue
+            if state == END_OF_GAME_STATE:
+                continue
             for action in legal_actions:
                 if action not in self.all_possible_actions:
                     self.all_possible_actions.append(action)
@@ -519,10 +521,11 @@ class OptimalTaxiAgent:
         #           (“wait”, “taxi 2”),
         #           (“pick up”, “very_fancy_taxi”, “Yossi”))
         # -----------------------------------------------------------------
-        state = str_to_dict(state)
+
         if state == END_OF_GAME_STATE:
             legal_actions = tuple()
             return legal_actions
+        state = str_to_dict(state)
 
         # For each taxi get Possible Atomic Actions
 
