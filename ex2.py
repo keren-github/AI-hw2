@@ -15,6 +15,7 @@ REFUEL_PENALTY = 10
 DROP_IN_DESTINATION_REWARD = 100
 INIT_TIME_LIMIT = 300
 TURN_TIME_LIMIT = 0.1
+END_OF_GAME_STATE = "EndOfGame"
 
 
 class OptimalTaxiAgent:
@@ -23,6 +24,8 @@ class OptimalTaxiAgent:
         # we shouldnt add anything to th states! because we get the state from user in "act" func
         self.max_turns_to_go = initial["turns to go"]
         self.max_fuel_per_taxi = self.get_max_fuel_per_taxi(initial)
+        self.max_capacity_per_taxi = self.get_max_capacity_per_taxi(initial)
+        self.n_passengers = len(initial["passengers"].keys())
 
         self.all_possible_states = self.set_all_possible_states()
         self.all_possible_actions = []  # list [a1, a2, ...]
@@ -68,11 +71,7 @@ class OptimalTaxiAgent:
 
         all_possible_states = []
         for taxis_option in all_taxis_permutations:
-            if len(taxis_option) == 1:
-                taxis_option = taxis_option[0]
             for passengers_option in all_passengers_permutations:
-                if len(passengers_option) == 1:
-                    passengers_option = passengers_option[0]
                 # create state dict
                 state = {
                     "optimal": optimal,
@@ -80,8 +79,33 @@ class OptimalTaxiAgent:
                     "taxis": taxis_option,
                     "passengers": passengers_option,
                 }
-                all_possible_states.append(state)
+                # checl legal capacity and passenger location
+                if self.is_legal_capactity_and_passengers_locations(state):
+                    all_possible_states.append(dict_to_str(state))
+        all_possible_states.append(END_OF_GAME_STATE)
         self.all_possible_states = all_possible_states
+
+    def is_legal_capactity_and_passengers_locations(self, state):
+        """
+        example: num_passengers in taxi   = 3
+                 max_capacity of taxi     = 4
+                 current_capacity of taxi = 1
+                 current_capacity + num_passengers =? max_capacity
+                 1 + 3 =? 4 ==> is legal!
+        """
+        legal = True
+        num_passengers_per_taxi = {taxi_name: 0 for taxi_name in state["taxis"].keys()}
+        for pass_dict in state["passengers"].values():
+            pass_location = pass_dict["location"]
+            if pass_location in state["taxis"]:
+                num_passengers_per_taxi[pass_location] += 1
+        for taxi_name, taxi_details in state["taxis"].items():
+            if (
+                taxi_details["capacity"] + num_passengers_per_taxi[taxi_name]
+                != self.max_capacity_per_taxi[taxi_name]
+            ):
+                legal = False
+        return legal
 
     def get_all_possible_taxis_dicts(self, taxis_init: dict, game_map):
         """
@@ -109,7 +133,10 @@ class OptimalTaxiAgent:
 
         # Get all permutations of taxis dicts (permutation contains one dict of each taxi)
         taxis_options_lists = list(all_options_by_taxi.values())
-        all_taxis_permutations = list(itertools.product(*taxis_options_lists))
+        if len(taxis_options_lists) == 1:
+            all_taxis_permutations = taxis_options_lists[0]
+        else:
+            all_taxis_permutations = list(itertools.product(*taxis_options_lists))
         return all_taxis_permutations
 
     def get_all_legal_taxis_locations(self, game_map):
@@ -156,7 +183,12 @@ class OptimalTaxiAgent:
 
         # Get all permutations of passengers dicts (permutation contains one dict of each passenger)
         passengers_options_lists = list(all_options_by_passenger.values())
-        all_passengers_permutations = list(itertools.product(*passengers_options_lists))
+        if len(passengers_options_lists) == 1:
+            all_passengers_permutations = passengers_options_lists[0]
+        else:
+            all_passengers_permutations = list(
+                itertools.product(*passengers_options_lists)
+            )
         return all_passengers_permutations
 
     def get_all_legal_locations_by_passenger(self, passengers_init, taxis_init):
@@ -188,12 +220,16 @@ class OptimalTaxiAgent:
         """
         for state in self.all_possible_states:
             legal_actions = self.actions(state)
-            legal_actions.append("reset")
-            legal_actions.append("terminate")
             self.all_possible_actions_for_state[state] = legal_actions
+            if len(legal_actions) == 0:
+                continue
             for action in legal_actions:
                 if action not in self.all_possible_actions:
                     self.all_possible_actions.append(action)
+                # find next_states and probs
+                if action == "terminate":
+                    self.Next_States_Probs[(state, action)] = ()
+                    continue
                 next_states_with_probs = self.result_with_probs(state, action)
                 for next_state, prob in next_states_with_probs.items():
                     self.Next_States_Probs[(state, action)] = (next_state, prob)
@@ -204,64 +240,101 @@ class OptimalTaxiAgent:
         output: next possible states and the probablilty for each one
         method:
             1.  Use the detrministic result function to get the next "regular" state.
-            2.  Get Changes Probabilties per passnger
-            3.  Get all possible new states with possible changes of destinations
-                3a. Get new_state prob and possible destinations
+            2.  Get all possible new states with possible changes of destinations
+                2a. Get new_state prob and possible destinations
                     where ths subset passengers may change their destination
-                3b. Get all destinations permutations
+                2b. Get all destinations permutations
                     (passengers have few possible goals to change to)
-                3c. For each permutation get new state with updated destinations
+                2c. For each permutation get new state with updated destinations
 
         """
         possible_next_state_probs = {}
         # 1. Use the detrministic result function to get the next "regular" state.
-        result_state = self.result(state, action)
+        result_state_str = self.result(state, action)
+        # 2. Get all possible new states with possible changes of destinations
+        if action == "reset":
+            reset_prob = 1  # we saw in check.py that they are not doing rechoice
+            possible_next_state_probs[result_state_str] = reset_prob
+            return possible_next_state_probs
 
-        # 2. Get Changes Probabilties per passnger
-        probs_by_pass = {}
-        for pass_name, pass_details in result_state["passengers"].items():
-            possible_goals = pass_details["possible_goals"]
-            # prob_change_goal is to rechoice goal from possible goals uniformic.
-            prob_rechoice_goal = pass_details["prob_change_goal"]
-            prob_not = 1 - prob_rechoice_goal
-            probs_by_pass[pass_name] = (prob_rechoice_goal, prob_not)
+        result_state = str_to_dict(result_state_str)
+        all_passengers_subsets = self.get_all_pssengers_subsets(result_state)
 
-        # 3. Get all possible new states with possible changes of destinations
-        all_passengers_subsets = powerset(state["passengers"].keys())
-        all_passengers_subsets.append([])  # no passenger is rechoicing his destination
-        # TODO: debug and make sure the loop doesnt skip the empty list
         for pass_subset_names in all_passengers_subsets:
-            # 3a. Get new_state prob and possible destinations
-            #     where ths subset passengers may change their destination
-            new_state_prob = 1  # init prob
-            possible_destinations_lists = []
-            for pass_name, prob_rechoice_goal, prob_not in probs_by_pass.items():
-                if pass_name in pass_subset_names:  # passenger rechoice destination
-                    new_state_prob *= prob_rechoice_goal
-                    possible_goals = list(result_state["passengers"]["possible_goals"])
-                else:
-                    new_state_prob *= prob_not
-                    possible_goals = result_state["passengers"]["destination"]
-                possible_destinations_lists.append(possible_goals)
-            # 3b. Get all destinations permutations
-            all_destinations_permu = list(
-                itertools.product(*possible_destinations_lists)
+            # 2a. Get new_state prob and possible destinations lists
+            #     where the subset passengers may change their destination
+            new_state_prob, dest_lists = self.get_prob_and_dest_lists(
+                self, result_state, pass_subset_names
             )
-            # 3c. For each permutation get new state with updated destinations
-            for destinations_permutation in all_destinations_permu:
-                new_state = result_state.copy()
-                for i, pass_name, pass_details in enumerate(
-                    new_state["passengers"].items()
-                ):
-                    pass_details["destination"] = destinations_permutation[i]
-                if new_state in possible_next_state_probs.keys():  # sum probs
-                    existing_prob = possible_next_state_probs[new_state]
-                    additional_prob = new_state_prob
-                    possible_next_state_probs[new_state] = (
-                        existing_prob + additional_prob
-                    )
-                else:
-                    possible_next_state_probs[new_state] = new_state
+
+            # 2b. Get all destinations permutations
+            all_dest_permu = self.get_all_dest_permutations(dest_lists)
+
+            # 2c. For each permutation get new state with updated destinations
+            #     and update possible_next_state_probs dict
+            for dest_permu in all_dest_permu:
+                new_state = self.get_new_state(result_state, dest_permu)
+                possible_next_state_probs = self.add_state_and_prob(
+                    new_state, new_state_prob, possible_next_state_probs
+                )
+
+        return possible_next_state_probs
+
+    def get_prob_and_dest_lists(self, result_state, pass_subset_names):
+        new_state_prob = 1  # init prob
+        dest_lists = []
+        for pass_name, pass_details in result_state["passengers"].items():
+            if pass_name in pass_subset_names:  # passenger rechoice destination
+                new_state_prob *= pass_details["prob_change_goal"]
+                possible_goals = list(pass_details["possible_goals"])
+            else:
+                new_state_prob *= 1 - pass_details["prob_change_goal"]
+                possible_goals = list(pass_details["destination"])
+            dest_lists.append(possible_goals)
+        return new_state_prob, dest_lists
+
+    def get_all_pssengers_subsets(self, result_state):
+        if self.n_passengers == 1:
+            all_passengers_subsets = list(result_state["passengers"].keys())
+        else:
+            all_passengers_subsets = powerset(result_state["passengers"].keys())
+        all_passengers_subsets.append(
+            [()]
+        )  # no passenger is rechoicing his destination
+        return all_passengers_subsets
+
+    def get_all_dest_permutations(self, possible_dest_lists):
+        if len(possible_dest_lists) <= 1:
+            all_dest_permu = possible_dest_lists[0]
+        else:
+            all_dest_permu = list(itertools.product(*possible_dest_lists))
+        return all_dest_permu
+
+    def get_new_state(self, result_state, dest_permu):
+        """
+        @ dest_permu: destinations permutation
+            example [(0,0), (2,1), (3,3)] permutaion of destinations
+                for [pass1, pass2, pass3]
+        """
+        new_state = deepcopy(result_state)
+        if self.n_passengers == 1:
+            for pass_name in new_state["passengers"].keys():
+                new_state["passengers"][pass_name]["destination"] = dest_permu
+        else:
+            for i, pass_name in enumerate(new_state["passengers"].keys()):
+                new_state["passengers"][pass_name]["destination"] = dest_permu[i]
+        return new_state
+
+    def add_state_and_prob(self, new_state, new_state_prob, possible_next_state_probs):
+        if dict_to_str(new_state) in possible_next_state_probs.keys():
+            # sum probs
+            existing_prob = possible_next_state_probs[new_state]
+            additional_prob = new_state_prob
+            possible_next_state_probs[dict_to_str(new_state)] = (
+                existing_prob + additional_prob
+            )
+        else:
+            possible_next_state_probs[dict_to_str(new_state)] = new_state_prob
         return possible_next_state_probs
 
     def value_iteration_with_dicts(self):
@@ -329,7 +402,6 @@ class OptimalTaxiAgent:
                         reward += DROP_IN_DESTINATION_REWARD
                     elif atomic_action[0] == "refuel":
                         reward -= REFUEL_PENALTY
-
             self.Rewards[action] = reward
 
     def get_max_fuel_per_taxi(self, initial):
@@ -337,6 +409,12 @@ class OptimalTaxiAgent:
         for taxi_name, taxi_dict in initial["taxis"].items():
             max_fuel_per_taxi[taxi_name] = taxi_dict["fuel"]
         return max_fuel_per_taxi
+
+    def get_max_capacity_per_taxi(self, initial):
+        max_capacity_per_taxi = {}
+        for taxi_name, taxi_dict in initial["taxis"].items():
+            max_capacity_per_taxi[taxi_name] = taxi_dict["capacity"]
+        return max_capacity_per_taxi
 
     def get_gas_station_list(self, map, h, w):
         g_list = []
@@ -425,7 +503,7 @@ class OptimalTaxiAgent:
             legal_drop_offs_by_taxi[taxi_name] = legal_drop_offs
         return legal_drop_offs_by_taxi
 
-    def actions(self, state: dict) -> Tuple[Tuple[Tuple]]:
+    def actions(self, state: str) -> Tuple[Tuple[Tuple]]:
         """Returns all the actions that can be executed in the given
         state. The result should be a tuple (or other iterable) of actions
         as defined in the problem description file"""
@@ -443,6 +521,10 @@ class OptimalTaxiAgent:
         #           (“wait”, “taxi 2”),
         #           (“pick up”, “very_fancy_taxi”, “Yossi”))
         # -----------------------------------------------------------------
+        state = str_to_dict(state)
+        if state == END_OF_GAME_STATE:
+            legal_actions = tuple()
+            return legal_actions
 
         # For each taxi get Possible Atomic Actions
 
@@ -517,15 +599,25 @@ class OptimalTaxiAgent:
 
         return tuple(legal_actions)
 
-    def result(self, state: dict, action: Tuple[Tuple]) -> dict:
+    def result(self, state: str, action: Tuple[Tuple]) -> dict:
         """Return the state that results from executing the given
         action in the given state. The action must be one of
         self.actions(state)."""
+        state = str_to_dict(state)
         result_state = deepcopy(state)
 
-        for action_tuple in action:
-            result_state = self._execute_action_tuple(result_state, action_tuple)
+        if action == "reset":
+            return dict_to_str(self.reset_environment(result_state))
+        elif action == "terminate":
+            return END_OF_GAME_STATE
+        else:
+            for action_tuple in action:
+                result_state = self._execute_action_tuple(result_state, action_tuple)
+            return dict_to_str(result_state)  # back into a hashable
 
+    def reset_environment(self, result_state):
+        result_state["taxis"] = deepcopy(self.initial["taxis"])
+        result_state["passengers"] = deepcopy(self.initial["passengers"])
         return result_state
 
     def _execute_action_tuple(self, state: dict, action_tuple: Tuple) -> dict:
