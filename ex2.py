@@ -29,7 +29,7 @@ class OptimalTaxiAgent:
         self.map_num_rows = len(initial["map"])
         self.map_num_cols = len(initial["map"][0])
 
-        self.all_possible_states = self.set_all_possible_states()
+        self.all_possible_states = []
         self.all_possible_actions = []  # list [a1, a2, ...]
         self.all_possible_actions_for_state = {}  # dict {state: a1, a2, ...}
 
@@ -42,6 +42,7 @@ class OptimalTaxiAgent:
 
         self.set_all_possible_states()
         self.set_all_possible_actions_and_next_states()
+        self.set_rewards_for_states()
         self.value_iteration_with_dicts()
 
     def act(self, state: dict):
@@ -49,9 +50,13 @@ class OptimalTaxiAgent:
         Get the best action by best_actions dict.
         best actions dict was precalculated by value iteration in the init of agent
         """
+        state = deepcopy(state)
         t = state["turns to go"]
-        state_without_t = state.pop("turns to go")
-        best_action = self.best_actions[(state_without_t, t)]
+        state.pop("turns to go")  # remove t from state
+        state_str = dict_to_str(state)
+        if t == 100:
+            print(self.Values[t][state_str])
+        best_action = self.Best_Actions[t][state_str]
         return best_action
 
     def set_all_possible_states(self):
@@ -66,14 +71,14 @@ class OptimalTaxiAgent:
         game_map = self.initial["map"]
         taxis_init = self.initial["taxis"]
         passengers_init = self.initial["passengers"]
-        all_taxis_permutations = self.get_all_possible_taxis_dicts(taxis_init, game_map)
-        all_passengers_permutations = self.get_all_possible_passengers_dicts(
+        all_taxis_options = self.get_all_possible_taxis_dicts(taxis_init, game_map)
+        all_passengers_options = self.get_all_possible_passengers_dicts(
             passengers_init, taxis_init
         )
 
         all_possible_states = []
-        for taxis_option in all_taxis_permutations:
-            for passengers_option in all_passengers_permutations:
+        for taxis_option in all_taxis_options:
+            for passengers_option in all_passengers_options:
                 # create state dict
                 state = {
                     "optimal": optimal,
@@ -136,10 +141,18 @@ class OptimalTaxiAgent:
         # Get all permutations of taxis dicts (permutation contains one dict of each taxi)
         taxis_options_lists = list(all_options_by_taxi.values())
         if len(taxis_options_lists) == 1:
-            all_taxis_permutations = taxis_options_lists[0]
+            all_taxis_permutations = [[i] for i in taxis_options_lists[0]]
         else:
             all_taxis_permutations = list(itertools.product(*taxis_options_lists))
-        return all_taxis_permutations
+
+        # create taxis dict from each permutation of dicts
+        all_taxis_options = []
+        for permutation in all_taxis_permutations:
+            taxis_dict = {}
+            for i, taxi_name in enumerate(taxis_init.keys()):
+                taxis_dict[taxi_name] = permutation[i][taxi_name]
+            all_taxis_options.append(taxis_dict)
+        return all_taxis_options
 
     def get_all_legal_taxis_locations(self, game_map):
         """
@@ -187,12 +200,20 @@ class OptimalTaxiAgent:
         # Get all permutations of passengers dicts (permutation contains one dict of each passenger)
         passengers_options_lists = list(all_options_by_passenger.values())
         if len(passengers_options_lists) == 1:
-            all_passengers_permutations = passengers_options_lists[0]
+            all_passengers_permutations = [[i] for i in passengers_options_lists[0]]
         else:
             all_passengers_permutations = list(
                 itertools.product(*passengers_options_lists)
             )
-        return all_passengers_permutations
+
+        # create passengers dict from each permutation of dicts
+        all_passengers_options = []
+        for permutation in all_passengers_permutations:
+            passengers_dict = {}
+            for i, pass_name in enumerate(passengers_init.keys()):
+                passengers_dict[pass_name] = permutation[i][pass_name]
+            all_passengers_options.append(passengers_dict)
+        return all_passengers_options
 
     def get_all_legal_locations_by_passenger(self, passengers_init, taxis_init):
         """
@@ -236,8 +257,9 @@ class OptimalTaxiAgent:
                     self.Next_States_Probs[(state, action)] = ()
                     continue
                 next_states_with_probs = self.result_with_probs(state, action)
+                self.Next_States_Probs[(state, action)] = []
                 for next_state, prob in next_states_with_probs.items():
-                    self.Next_States_Probs[(state, action)] = (next_state, prob)
+                    self.Next_States_Probs[(state, action)].append((next_state, prob))
 
     def result_with_probs(self, state, action):
         """
@@ -368,13 +390,20 @@ class OptimalTaxiAgent:
                                  state1: best_value}
                             }
         """
-        for t in range(self.max_turns_to_go):
+        for t in range(self.max_turns_to_go + 1):
+            self.Values[t] = {}
+            self.Actions_Values[t] = {}
+            self.Best_Actions[t] = {}
             if t == 0:
                 # End of game - no action is possible --> value is 0 for all states.
                 for state in self.all_possible_states:
                     self.Values[t][state] = 0
             else:
                 for state in self.all_possible_states:
+                    if state == END_OF_GAME_STATE:
+                        self.Values[t][state] = 0
+                        continue
+                    self.Actions_Values[t][state] = {}
                     # Update - Actions_Values dict
                     for action in self.all_possible_actions_for_state[state]:
                         # V(t, s) = max_over_a{
@@ -384,9 +413,9 @@ class OptimalTaxiAgent:
                             value_of_action += prob * self.Values[t - 1][next_state]
                         self.Actions_Values[t][state][action] = value_of_action
                     # Find - best action and best value
-                    possible_actions = self.Actions_Values[t][state].keys()
-                    possible_values = self.Actions_Values[t][state].values()
-                    best_value = np.max(possible_values)
+                    possible_actions = list(self.Actions_Values[t][state].keys())
+                    possible_values = list(self.Actions_Values[t][state].values())
+                    best_value = max(possible_values)
                     best_action = possible_actions[np.argmax(possible_values)]
                     # Update  - Values and Best_Actions dicts
                     self.Values[t][state] = best_value
@@ -724,5 +753,3 @@ if __name__ == "__main__":
         "turns to go": 100,
     }
     agent = OptimalTaxiAgent(initial=state)
-    # agent.actions({"bla": "bla"})
-    # agent.set_all_possible_states()
