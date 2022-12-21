@@ -264,7 +264,7 @@ class OptimalTaxiAgent:
             # 2a. Get new_state prob and possible destinations lists
             #     where the subset passengers may change their destination
             new_state_prob, dest_lists = self.get_prob_and_dest_lists(
-                self, result_state, pass_subset_names
+                result_state, pass_subset_names
             )
 
             # 2b. Get all destinations permutations
@@ -285,11 +285,12 @@ class OptimalTaxiAgent:
         dest_lists = []
         for pass_name, pass_details in result_state["passengers"].items():
             if pass_name in pass_subset_names:  # passenger rechoice destination
-                new_state_prob *= pass_details["prob_change_goal"]
                 possible_goals = list(pass_details["possible_goals"])
+                n_goals = len(possible_goals)
+                new_state_prob *= (pass_details["prob_change_goal"]) / n_goals
             else:
                 new_state_prob *= 1 - pass_details["prob_change_goal"]
-                possible_goals = list(pass_details["destination"])
+                possible_goals = list([pass_details["destination"]])
             dest_lists.append(possible_goals)
         return new_state_prob, dest_lists
 
@@ -326,15 +327,13 @@ class OptimalTaxiAgent:
         return new_state
 
     def add_state_and_prob(self, new_state, new_state_prob, possible_next_state_probs):
-        if dict_to_str(new_state) in possible_next_state_probs.keys():
-            # sum probs
-            existing_prob = possible_next_state_probs[new_state]
+        new_state_str = dict_to_str(new_state)
+        if new_state_str in possible_next_state_probs.keys():  # sum probs
+            existing_prob = possible_next_state_probs[new_state_str]
             additional_prob = new_state_prob
-            possible_next_state_probs[dict_to_str(new_state)] = (
-                existing_prob + additional_prob
-            )
+            possible_next_state_probs[new_state_str] = existing_prob + additional_prob
         else:
-            possible_next_state_probs[dict_to_str(new_state)] = new_state_prob
+            possible_next_state_probs[new_state_str] = new_state_prob
         return possible_next_state_probs
 
     def value_iteration_with_dicts(self):
