@@ -22,6 +22,7 @@ class OptimalTaxiAgent:
         self.initial = initial
         # we shouldnt add anything to th states! because we get the state from user in "act" func
         self.max_turns_to_go = initial["turns to go"]
+        self.max_fuel_per_taxi = self.get_max_fuel_per_taxi(initial)
 
         self.all_possible_states = self.set_all_possible_states()
         self.all_possible_actions = []  # list [a1, a2, ...]
@@ -331,6 +332,12 @@ class OptimalTaxiAgent:
 
             self.Rewards[action] = reward
 
+    def get_max_fuel_per_taxi(initial):
+        max_fuel_per_taxi = {}
+        for taxi_name, taxi_dict in initial["taxis"].items():
+            max_fuel_per_taxi[taxi_name] = taxi_dict["fuel"]
+        return max_fuel_per_taxi
+
     def get_gas_station_list(self, map, h, w):
         g_list = []
         for i in range(h):
@@ -550,29 +557,18 @@ class OptimalTaxiAgent:
                 len(action_tuple) == 3
             ), f"len of action_tuple should be 3: {action_tuple}"
             # taxi updates:
-            #   fuel -= 1
             result_state["taxis"][taxi_name]["fuel"] -= 1
-            #   location
-            future_location = action_tuple[2]
-            result_state["taxis"][taxi_name]["location"] = future_location
+            result_state["taxis"][taxi_name]["location"] = action_tuple[2]
 
         elif action_type == PICK_UP:  # (“pick up”, “taxi_name”, “passenger_name”)
             assert (
                 len(action_tuple) == 3
             ), f"len of action_tuple should be 3: {action_tuple}"
             passenger_name = action_tuple[2]
-
             # Taxi updates:
-            #   taxi capacity -= 1
             result_state["taxis"][taxi_name]["capacity"] -= 1
-            # Problem updates:
-            #   n_picked_undelivered += 1
-            result_state["n_picked_undelivered"] += 1
-            #   n_unpicked -= 1
-            result_state["n_unpicked"] -= 1
             # Passenger updates:
-            #   update "in_taxi" of passenger to name of taxi
-            result_state["passengers"][passenger_name]["in_taxi"] = taxi_name
+            result_state["passengers"][passenger_name]["location"] = taxi_name
 
         elif action_type == DROP_OFF:  # (“drop off”, “taxi_name”, “passenger_name”)
             assert (
@@ -580,30 +576,18 @@ class OptimalTaxiAgent:
             ), f"len of action_tuple should be 3: {action_tuple}"
             passenger_name = action_tuple[2]
             # Taxi updates:
-            #   taxi capacity += 1
             result_state["taxis"][taxi_name]["capacity"] += 1
-            # Problem updates:
-            #   n_picked_undelivered -= 1
-            result_state["n_picked_undelivered"] -= 1
-            #   n_delivered += 1
-            result_state["n_delivered"] += 1
-            # Passenger updates:
-            #   passenger location = taxi location
+            # Passenger updates: passenger location = taxi location
             result_state["passengers"][passenger_name]["location"] = result_state[
                 "taxis"
             ][taxi_name]["location"]
-            #   update "in_taxi" of passenger to False
-            result_state["passengers"][passenger_name]["in_taxi"] = False
 
         elif action_type == REFUEL:  # ("refuel", "taxi_name")
             assert (
                 len(action_tuple) == 2
             ), f"len of action_tuple should be 2: {action_tuple}"
-            # taxi updates:
-            #   fuel = max_fuel
-            result_state["taxis"][taxi_name]["fuel"] = result_state["taxis"][taxi_name][
-                "max_fuel"
-            ]
+            # taxi updates: fuel = max_fuel
+            result_state["taxis"][taxi_name]["fuel"] = self.max_fuel_per_taxi[taxi_name]
 
         elif action_type == WAIT:  # ("wait", "taxi_name")
             assert (
