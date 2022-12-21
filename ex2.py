@@ -332,7 +332,7 @@ class OptimalTaxiAgent:
 
             self.Rewards[action] = reward
 
-    def get_max_fuel_per_taxi(initial):
+    def get_max_fuel_per_taxi(self, initial):
         max_fuel_per_taxi = {}
         for taxi_name, taxi_dict in initial["taxis"].items():
             max_fuel_per_taxi[taxi_name] = taxi_dict["fuel"]
