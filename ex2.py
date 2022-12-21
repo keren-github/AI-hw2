@@ -217,7 +217,7 @@ class OptimalTaxiAgent:
 
     def get_all_legal_locations_by_passenger(self, passengers_init, taxis_init):
         """
-        passenger location is on of the following:
+        passenger location is one of the following:
             1. the initialized location of this passenger
             2. one of the taxis names (when taxi picked him up)
             3. one of the possible goals of this passenger (when taxi dropped him offß)
