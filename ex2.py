@@ -168,9 +168,9 @@ class OptimalTaxiAgent:
         taxis_names = list(taxis_init.keys())
         all_legal_locations_by_passenger = {}
         for curr_passenger, passengers_dict in passengers_init.items():
-            init_location = list(passengers_dict["location"])
+            init_location = [tuple(passengers_dict["location"])]
             possible_goals = list(passengers_dict["possible_goals"])
-            all_legal_locations_by_passenger[curr_passenger] = (
+            all_legal_locations_by_passenger[curr_passenger] = set(
                 init_location + taxis_names + possible_goals
             )
         return all_legal_locations_by_passenger
@@ -410,11 +410,11 @@ class OptimalTaxiAgent:
         for taxi_name, taxi_dict in state["taxis"].items():
             legal_drop_offs = []
             # go over the passengers that's on the curr taxi
-            for passenger_name in taxi_dict["passengers_list"]:
-                passenger_dict = state["passengers"][passenger_name]
-                # check that location of taxi is the same as destination of the passenger
-                if taxi_dict["location"] == passenger_dict["destination"]:
-                    legal_drop_offs.append(passenger_name)
+            for passenger_name, passenger_dict in state["passengers"].items():
+                if passenger_dict["location"] == taxi_name:
+                    # check that location of taxi is the same as destination of the passenger
+                    if taxi_dict["location"] == passenger_dict["destination"]:
+                        legal_drop_offs.append(passenger_name)
             legal_drop_offs_by_taxi[taxi_name] = legal_drop_offs
         return legal_drop_offs_by_taxi
 
@@ -565,8 +565,6 @@ class OptimalTaxiAgent:
             # Taxi updates:
             #   taxi capacity -= 1
             result_state["taxis"][taxi_name]["capacity"] -= 1
-            #   add passenger name to passengers_list of taxi
-            result_state["taxis"][taxi_name]["passengers_list"].append(passenger_name)
             # Problem updates:
             #   n_picked_undelivered += 1
             result_state["n_picked_undelivered"] += 1
@@ -584,8 +582,6 @@ class OptimalTaxiAgent:
             # Taxi updates:
             #   taxi capacity += 1
             result_state["taxis"][taxi_name]["capacity"] += 1
-            #   remove passenger name from passengers_list of taxi
-            result_state["taxis"][taxi_name]["passengers_list"].remove(passenger_name)
             # Problem updates:
             #   n_picked_undelivered -= 1
             result_state["n_picked_undelivered"] -= 1
