@@ -486,8 +486,7 @@ class OptimalTaxiAgent:
         # -----------------------------------------------------------------
         # For each action - Check That Taxis Don't Clash with each other
         #   == not going to the same location (therefore cannot pickup the same passenger)
-        n_taxis = state["n_taxis"]
-        if n_taxis > 1:
+        if len(state["taxis"]) > 1:
             legal_actions = []
             for action in actions:
                 taxis_next_locations = []
@@ -503,7 +502,7 @@ class OptimalTaxiAgent:
                         taxi_next_location = taxi_curr_location
                     taxis_next_locations.append(taxi_next_location)
                 # check if there are 2 taxis in the same location
-                legal_action = len(set(taxis_next_locations)) == n_taxis
+                legal_action = len(set(taxis_next_locations)) == len(state["taxis"])
                 if legal_action:
                     legal_actions.append(action)
         else:  # n_taxis == 1 --> no clashing between taxis
