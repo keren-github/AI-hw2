@@ -26,6 +26,8 @@ class OptimalTaxiAgent:
         self.max_fuel_per_taxi = self.get_max_fuel_per_taxi(initial)
         self.max_capacity_per_taxi = self.get_max_capacity_per_taxi(initial)
         self.n_passengers = len(initial["passengers"].keys())
+        self.map_num_rows = len(initial["map"])
+        self.map_num_cols = len(initial["map"][0])
 
         self.all_possible_states = self.set_all_possible_states()
         self.all_possible_actions = []  # list [a1, a2, ...]
@@ -143,8 +145,9 @@ class OptimalTaxiAgent:
         """
         taxi location is any location on game_map that is not "I"
         """
-        num_rows, num_cols = len(game_map), len(game_map[0])
-        taxis_locations = [(i, j) for i in range(num_rows) for j in range(num_cols)]
+        taxis_locations = [
+            (i, j) for i in range(self.map_num_rows) for j in range(self.map_num_cols)
+        ]
         for x, y in taxis_locations:
             # remove I tiles
             if game_map[x][y] == "I":
@@ -443,17 +446,13 @@ class OptimalTaxiAgent:
             # 1. check fuel > 0
             legal_locations = []
             if taxi_dict["fuel"] > 0:
-                map_size_height = state["map_size_height"]
-                map_size_width = state["map_size_width"]
-                map_matrix = state["map"]
-
                 possible_locations = possible_locations_by_taxi[taxi_name]
                 for new_location in possible_locations:
                     x, y = new_location
                     # 2. check that the taxi doesn't get out of the map
                     # 3. check that the taxi is on a passable tile
-                    if (0 <= x < map_size_height) and (0 <= y < map_size_width):
-                        if map_matrix[x][y] != "I":
+                    if (0 <= x < self.map_num_rows) and (0 <= y < self.map_num_cols):
+                        if state["map"][x][y] != "I":
                             legal_locations.append(new_location)
             legal_locations_by_taxi[taxi_name] = legal_locations
         return legal_locations_by_taxi
