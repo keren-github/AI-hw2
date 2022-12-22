@@ -1,5 +1,5 @@
 additional_inputs = [
-    {
+    {#1
         'optimal': False,
         "turns to go": 50,
         'map': [['P', 'P', 'P', 'P', 'P'],
@@ -13,7 +13,7 @@ additional_inputs = [
                                   "possible_goals": ((2, 1), (0, 0)), "prob_change_goal": 0.3}}
     },
 
-    {
+    {#2
         'optimal': False,
         "turns to go": 100,
         'map': [['P', 'P', 'P', 'P', 'P'],
@@ -27,7 +27,7 @@ additional_inputs = [
                                 'possible_goals': ((0, 2), (1, 0)), 'prob_change_goal': 0.3}},
     },
 
-    {
+    {#3
         'optimal': False,
         "turns to go": 50,
         'map': [['P', 'P', 'P', 'P', 'P'],
@@ -44,7 +44,7 @@ additional_inputs = [
                                  'possible_goals': ((3, 2), (0, 0)), 'prob_change_goal': 0.2}},
     },
 
-    {
+    {#4
         'optimal': False,
         "turns to go": 100,
         'map': [['P', 'P', 'P', 'P', 'P'],
@@ -59,7 +59,7 @@ additional_inputs = [
                                 'possible_goals': ((4, 0),), 'prob_change_goal': 0.8}},
     },
 
-    {
+    {#5
         'optimal': False,
         "turns to go": 100,
         'map': [['P', 'P', 'P', 'I', 'P', 'P', 'P'],
@@ -79,7 +79,7 @@ additional_inputs = [
                                  'possible_goals': ((2, 3), (2, 2), (4, 3)), 'prob_change_goal': 0.3}},
     },
 
-    {
+    {#6
         'optimal': False,
         "turns to go": 100,
         'map': [['P', 'P', 'P', 'I', 'P', 'P', 'P'],
@@ -97,7 +97,7 @@ additional_inputs = [
                                   'possible_goals': ((1, 4), (5, 0), (3, 4)), 'prob_change_goal': 0.2}},
     },
 
-    {
+    {#7
         'optimal': False,
         "turns to go": 50,
         'map': [['P', 'P', 'P', 'I', 'P', 'P', 'P'],
@@ -115,7 +115,7 @@ additional_inputs = [
                                     'possible_goals': ((1, 6), (3, 6), (4, 6)), 'prob_change_goal': 0.2}},
     },
 
-    {
+    {#8
         'optimal': False,
         "turns to go": 100,
         'map': [['P', 'P', 'P', 'P', 'P'],
@@ -134,7 +134,7 @@ additional_inputs = [
                                  'possible_goals': ((3, 2),), 'prob_change_goal': 0.2}},
     },
 
-    {
+    {#9
         'optimal': False,
         "turns to go": 100,
         'map': [['P', 'P', 'P', 'P', 'P'],
@@ -154,7 +154,7 @@ additional_inputs = [
                                     'possible_goals': ((0, 3), (4, 4), (2, 1)), 'prob_change_goal': 0.2}},
     },
 
-    {
+    {#10
         'optimal': False,
         "turns to go": 200,
         'map': [['P', 'P', 'P', 'I', 'P', 'P', 'P'],
