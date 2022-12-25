@@ -182,7 +182,7 @@ additional_inputs = [
                        'Khaled': {'location': (5, 1), 'destination': (3, 6),
                                   'possible_goals': ((3, 6), (1, 2), (5, 1)), 'prob_change_goal': 0.2}},
     },
-    {
+    {#11
         'optimal': True,
         "turns to go": 50,
         'map': [['P', 'P', 'G', 'P', 'P'], ],
@@ -191,7 +191,7 @@ additional_inputs = [
                                    "possible_goals": ((0, 0), (0, 4)), "prob_change_goal": 0.2},
                        }
     },
-    {
+    {#12
         'optimal': True,
         "turns to go": 50,
         'map': [['P', 'P', 'P', 'P', 'P'], ],
@@ -200,7 +200,7 @@ additional_inputs = [
                                    "possible_goals": ((0, 0), (0, 4)), "prob_change_goal": 0.7},
                        }
     },
-    {
+    {#13
         'optimal': True,
         "turns to go": 50,
         'map': [['P', 'P', 'P', 'P', 'G'], ],

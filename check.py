@@ -46,7 +46,6 @@ class TaxiStochasticProblem:
         if end - start > INIT_TIME_LIMIT:
             logging.critical("timed out on constructor")
             raise TimeoutError
-        print("time init:", end - start)
         self.score = 0
 
     def run_round(self):
