@@ -1635,6 +1635,8 @@ class TaxiAgent:
 
             # =========== update ===========
             # approximate value func
+            if state_str not in self.State_Action_Values.keys():
+                print()
             Q_s_a = self.State_Action_Values[state_str][first_act]
             self.State_Action_Values[state_str][first_act] = Q_s_a + lr * (q - Q_s_a)
 
@@ -1646,15 +1648,10 @@ class TaxiAgent:
             self.states_info_dict[state_str]["alg_score"] = x + np.sqrt(2 * np.log(t) / n)
 
     def select(self, start_time):
-        if time.time() - start_time < 10:
+        if time.time() - start_time < 8:
             state_str = self.explore()
-        elif time.time() - start_time < 20:
-            if random.random() < 0.5:
-                state_str = self.exploit()
-            else:
-                state_str = self.explore()
         else:
-            if random.random() < 0.95:
+            if random.random() < 0.99:
                 state_str = self.exploit()
             else:
                 state_str = self.explore()
@@ -1679,7 +1676,8 @@ class TaxiAgent:
         q = 0.0
         first_act = ()
         for depth in range(TaxiAgent.N):
-            if curr_state == END_OF_GAME_STATE:
+            if curr_state == END_OF_GAME_STATE \
+                    or (str_to_dict(curr_state)["turns to go"] / self.max_turns_to_go) < 0.5:
                 break
 
             # ~~~~~~~~ expend
@@ -1698,15 +1696,14 @@ class TaxiAgent:
             # init dict State_Action_Values
             if curr_state not in self.State_Action_Values:
                 self.State_Action_Values[curr_state] = {}
-            if action not in self.State_Action_Values[curr_state]:
+            if action not in self.State_Action_Values[curr_state].keys():
                 self.State_Action_Values[curr_state][action] = 0
-            if depth == 0:
-                first_act = action
 
             if curr_state not in self.actions_for_state_list:
                 self.actions_for_state_list[curr_state] = []
 
             self.actions_for_state_list[curr_state].append(action)
+
             # add discounted reward
             if action not in self.Rewards.keys():
                 self.Rewards[action] = self._get_reward_for_action(action)
@@ -1714,8 +1711,11 @@ class TaxiAgent:
 
             # move to next state with chosen action
             curr_state, other_possible_next_states = self.result(curr_state, action)
-            self.unvisited_states += other_possible_next_states
-            self.unvisited_states = list(set(self.unvisited_states))  # is this necessary?
+            self.unvisited_states += other_possible_next_states   # TODO check
+            self.unvisited_states = list(set(self.unvisited_states))
+
+            if depth == 0:
+                first_act = action
 
         return q, first_act
 
@@ -1937,10 +1937,12 @@ class TaxiAgent:
         res_state = self.apply(state, action)
         other_possible_next_states = []
         if res_state == END_OF_GAME_STATE:
+            res_state = dict_to_str(res_state)
             return res_state, other_possible_next_states
         if action != "reset":
             res_state = self.environment_step(res_state)
             other_possible_next_states = self.get_possible_next_states(res_state)
+            other_possible_next_states.remove(dict_to_str(res_state))
         res_state = dict_to_str(res_state)
         return res_state, other_possible_next_states
 
@@ -2061,6 +2063,7 @@ class TaxiAgent:
         state["passengers"] = deepcopy(self.initial["passengers"])
         state["turns to go"] -= 1
         return state
+
 
 def dict_to_str(d: dict) -> str:
     d_str = str(d)

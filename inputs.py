@@ -79,18 +79,18 @@ small_inputs = [
 # ]
 
 
-# small_inputs = [
-#     {
-#         "optimal": False,
-#         "map": [['P', 'P'],
-#                 ['P', 'P']],
-#         "taxis": {'taxi 1': {"location": (0, 0), "fuel": 3, "capacity": 1}},
-#         "passengers": {'Dana': {"location": (0, 1), "destination": (1, 1),
-#                                 "possible_goals": ((1, 1),), "prob_change_goal": 0.1},
-#                        },
-#         "turns to go": 10
-#     },
-# ]
+small_inputs = [
+    {
+        "optimal": False,
+        "map": [['P', 'P'],
+                ['P', 'P']],
+        "taxis": {'taxi 1': {"location": (0, 0), "fuel": 3, "capacity": 1}},
+        "passengers": {'Dana': {"location": (0, 1), "destination": (1, 1),
+                                "possible_goals": ((1, 1),), "prob_change_goal": 0.1},
+                       },
+        "turns to go": 10
+    },
+]
 
 
 # TURNS_TO_GO = 100
