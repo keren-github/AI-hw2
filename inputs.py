@@ -79,30 +79,36 @@ small_inputs = [
 # ]
 
 
-small_inputs = [
-    {
-        "optimal": False,
-        "map": [['P', 'P'],
-                ['P', 'P']],
-        "taxis": {'taxi 1': {"location": (0, 0), "fuel": 3, "capacity": 1}},
-        "passengers": {'Dana': {"location": (0, 1), "destination": (1, 1),
-                                "possible_goals": ((1, 1),), "prob_change_goal": 0.1},
-                       },
-        "turns to go": 10
-    },
-]
-
-
-# TURNS_TO_GO = 100
 # small_inputs = [
 #     {
-#         "optimal": True,
-#         "map": [['P', 'P', 'P'],
-#                 ['P', 'G', 'P'],
-#                 ['P', 'P', 'P']],
-#         "taxis": {'taxi 1': {"location": (0, 0), "fuel": 10, "capacity": 1}},
-#         "passengers": {'Dana': {"location": (2, 2), "destination": (0, 0),
-#                                 "possible_goals": ((0, 0), (2, 2)), "prob_change_goal": 0.1}},
-#         "turns to go": TURNS_TO_GO
-#     }
+#         "optimal": False,
+#         "map": [['P', 'P'],
+#                 ['P', 'P']],
+#         "taxis": {'taxi 1': {"location": (0, 0), "fuel": 3, "capacity": 1}},
+#         "passengers": {'Dana': {"location": (0, 1), "destination": (1, 1),
+#                                 "possible_goals": ((1, 1),), "prob_change_goal": 0.1},
+#                        },
+#         "turns to go": 10
+#     },
 # ]
+
+
+# small_inputs = \
+#     [ {#8
+#         'optimal': False,
+#         "turns to go": 100,
+#         'map': [['P', 'P', 'P', 'P', 'P'],
+#                 ['P', 'I', 'P', 'G', 'P'],
+#                 ['P', 'P', 'I', 'P', 'P'],
+#                 ['P', 'P', 'P', 'I', 'P']],
+#         'taxis': {'taxi 1': {'location': (2, 0), 'fuel': 5, 'capacity': 2},
+#                   'taxi 2': {'location': (0, 1), 'fuel': 6, 'capacity': 2}},
+#         'passengers': {'Iris': {'location': (0, 0), 'destination': (1, 4),
+#                                 'possible_goals': ((1, 4),), 'prob_change_goal': 0.2},
+#                        'Daniel': {'location': (3, 1), 'destination': (2, 1),
+#                                   'possible_goals': ((2, 1), (0, 1), (3, 1)), 'prob_change_goal': 0.2},
+#                        'Freyja': {'location': (2, 3), 'destination': (2, 4),
+#                                   'possible_goals': ((2, 4), (3, 0), (3, 2)), 'prob_change_goal': 0.2},
+#                        'Tamar': {'location': (3, 0), 'destination': (3, 2),
+#                                  'possible_goals': ((3, 2),), 'prob_change_goal': 0.2}},
+#     }]
