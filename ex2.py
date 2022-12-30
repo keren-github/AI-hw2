@@ -740,7 +740,7 @@ class TaxiAgent:
     PROB_TO_ADD_STATE = 1.0
 
     def __init__(self, initial: dict):
-        start = time.time()
+        # start = time.time()
         random.seed(42)
         self.initial = initial
         # we shouldn't add anything to the initial state! because we get the state from user in "act" func
@@ -763,8 +763,9 @@ class TaxiAgent:
         self.Values = {}
         self.Best_Actions = {}
 
-        self.best_passengers_names = []
+        self.best_pass_name = None
         self.passengers_init = self._get_best_passenger_in_init_state()
+        self.best_taxi_name = None
         self.taxis_init = self._get_best_taxi_in_init_state()
 
         self.set_all_possible_states()
@@ -772,7 +773,7 @@ class TaxiAgent:
         self.set_rewards_for_actions()
         self.value_iteration_with_dicts()
 
-        print('TaxiAgent initialized in', time.time() - start)
+        # print('TaxiAgent initialized in', time.time() - start)
 
     def act(self, state: dict):
         """
@@ -787,10 +788,8 @@ class TaxiAgent:
         state_str = dict_to_str(state)
         if t == self.max_turns_to_go:    # for debug
             print(f"{t=}", self.Values[t][state_str])
-        try:
-            best_action = self.Best_Actions[t][state_str]
-        except Exception as e:
-            print()
+        best_action = self.Best_Actions[t][state_str]
+        # print(best_action)
         return best_action
 
     def _get_best_pass_dict(self, state):
@@ -855,9 +854,15 @@ class TaxiAgent:
 
     def _get_best_taxi_in_init_state(self):
         taxis_init = self.initial["taxis"]
-        list_fuel = [p_d['fuel'] for p_d in taxis_init.values()]
+        pass_loc = self.passengers_init[self.best_pass_name]['location']
+
+        list_fuel = np.array([p_d['fuel'] for p_d in taxis_init.values()])
+        list_dist_from_pass = np.array([manhattan_dist(pass_loc, p_d['location']) for p_d in taxis_init.values()])
+
         list_taxis_names = list(taxis_init.keys())
-        best_taxi_index = np.argmax(list_fuel)
+        # best_taxi_index = np.argmax(list_fuel)
+        best_taxi_index = np.argmin(list_dist_from_pass)
+
         self.best_taxi_name = list_taxis_names[best_taxi_index]
 
         best_taxi_dict = dict()
@@ -1247,10 +1252,7 @@ class TaxiAgent:
                         #              sum_over_next_s[prob(next_s, a)* V(t-1, next_s)] + Reward(a)}
                         value_of_action = self.Rewards[action]  # init
                         for next_state, prob in self.Next_States_Probs[(state, action)]:
-                            try:
-                                value_of_action += prob * self.Values[t - 1][next_state]
-                            except:
-                                print()
+                            value_of_action += prob * self.Values[t - 1][next_state]
                         self.Actions_Values[t][state][action] = value_of_action
                     # Find - best action and best value
                     possible_actions = list(self.Actions_Values[t][state].keys())
@@ -1568,7 +1570,7 @@ class TaxiAgentRL:
         self.RL_with_n_step_sarsa_algorithm()
         self.set_best_actions()
 
-        print('TaxiAgent initialized in', time.time() - start)
+        # print('TaxiAgent initialized in', time.time() - start)
 
     def act(self, state: dict):
         """
@@ -1605,8 +1607,6 @@ class TaxiAgentRL:
 
             # =========== update ===========
             # approximate value func
-            if state_str not in self.State_Action_Values.keys():
-                print()
             Q_s_a = self.State_Action_Values[state_str][first_act]
             self.State_Action_Values[state_str][first_act] = Q_s_a + lr * (q - Q_s_a)
 
@@ -2048,6 +2048,13 @@ def str_to_dict(s: str) -> dict:
 def sort_dict(d: dict) -> dict:
     sorted_keys = sorted(d)
     return {key: d[key] for key in sorted_keys}
+
+
+def manhattan_dist(a, b):
+    xA, yA = a
+    xB, yB = b
+    return abs(xA - xB) + abs(yA - yB)
+
 
 if __name__ == "__main__":
     state = {
