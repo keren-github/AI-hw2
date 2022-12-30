@@ -854,7 +854,7 @@ class TaxiAgent:
     def _get_best_passenger_in_init_state(self):
         passengers_init = deepcopy(self.initial["passengers"])
         if (self.best_pass_name is not None) and (len(self.initial["taxis"].keys()) == 1)\
-                and (len(self.initial["passengers"].keys()) == 1):
+                and (len(self.initial["passengers"].keys()) > 1):
             passengers_init.pop(self.best_pass_name)
         list_lens_goals_lists = [len(p_d['possible_goals']) for p_d in passengers_init.values()]
         list_passes_names = list(passengers_init.keys())
