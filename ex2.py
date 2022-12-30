@@ -62,8 +62,8 @@ class OptimalTaxiAgent:
         state.pop("turns to go")  # remove t from state
         state_str = dict_to_str(state)
         best_action = self.Best_Actions[t][state_str]
-        if t == self.max_turns_to_go:    # for debug
-            print(f"{t=}", self.Values[t][state_str])
+        # if t == self.max_turns_to_go:    # for debug
+        #     print(f"{t=}", self.Values[t][state_str])
             # for t_ in reversed(range(1, 101)):        # for debug
             #     print(f"{t_=}", self.Values[t_][state_str])     # for debug
             # print()
@@ -740,7 +740,8 @@ class TaxiAgent:
     PROB_TO_ADD_STATE = 1.0
 
     def __init__(self, initial: dict):
-        # start = time.time()
+        start = time.time()
+        is_positive_value = False
         random.seed(42)
         self.initial = initial
         # we shouldn't add anything to the initial state! because we get the state from user in "act" func
@@ -750,28 +751,37 @@ class TaxiAgent:
         self.n_passengers = len(initial["passengers"].keys())
         self.map_num_rows = len(initial["map"])
         self.map_num_cols = len(initial["map"][0])
-
-        self.all_possible_states = []
-        self.all_possible_actions = []  # list [a1, a2, ...]
-        self.all_possible_actions_for_state = {}  # dict {state: a1, a2, ...}
-        self.all_legal_locations_by_passenger = None
-
-        # for Value Iteration
-        self.Next_States_Probs = {}
-        self.Rewards = {}
-        self.Actions_Values = {}
-        self.Values = {}
-        self.Best_Actions = {}
-
         self.best_pass_name = None
-        self.passengers_init = self._get_best_passenger_in_init_state()
         self.best_taxi_name = None
-        self.taxis_init = self._get_best_taxi_in_init_state()
 
-        self.set_all_possible_states()
-        self.set_all_possible_actions_and_next_states()
-        self.set_rewards_for_actions()
-        self.value_iteration_with_dicts()
+        while not is_positive_value and time.time() - start < 150:
+
+            self.all_possible_states = []
+            self.all_possible_actions = []  # list [a1, a2, ...]
+            self.all_possible_actions_for_state = {}  # dict {state: a1, a2, ...}
+            self.all_legal_locations_by_passenger = None
+
+            # for Value Iteration
+            self.Next_States_Probs = {}
+            self.Rewards = {}
+            self.Actions_Values = {}
+            self.Values = {}
+            self.Best_Actions = {}
+
+            self.passengers_init = self._get_best_passenger_in_init_state()
+            self.taxis_init = self._get_best_taxi_in_init_state()
+
+            self.set_all_possible_states()
+            self.set_all_possible_actions_and_next_states()
+            self.set_rewards_for_actions()
+            self.value_iteration_with_dicts()
+
+            initial_modified = deepcopy(initial)
+            initial_modified['passengers'] = self.passengers_init
+            initial_modified.pop('turns to go')
+            init_state_str = dict_to_str(initial_modified)
+            if self.Values[self.max_turns_to_go][init_state_str] > 0:
+                is_positive_value = True
 
         # print('TaxiAgent initialized in', time.time() - start)
 
@@ -786,8 +796,8 @@ class TaxiAgent:
         t = state["turns to go"]
         state.pop("turns to go")  # remove t from state
         state_str = dict_to_str(state)
-        if t == self.max_turns_to_go:    # for debug
-            print(f"{t=}", self.Values[t][state_str])
+        # if t == self.max_turns_to_go:    # for debug
+        #     print(f"{t=}", self.Values[t][state_str])
         best_action = self.Best_Actions[t][state_str]
         # print(best_action)
         return best_action
@@ -842,7 +852,9 @@ class TaxiAgent:
         self.all_possible_states = all_possible_states
 
     def _get_best_passenger_in_init_state(self):
-        passengers_init = self.initial["passengers"]
+        passengers_init = deepcopy(self.initial["passengers"])
+        if (self.best_pass_name is not None) and (len(self.initial["taxis"].keys()) == 1):
+            passengers_init.pop(self.best_pass_name)
         list_lens_goals_lists = [len(p_d['possible_goals']) for p_d in passengers_init.values()]
         list_passes_names = list(passengers_init.keys())
         best_pass_index = np.argmin(list_lens_goals_lists)
@@ -853,7 +865,10 @@ class TaxiAgent:
         return best_pass_dict
 
     def _get_best_taxi_in_init_state(self):
-        taxis_init = self.initial["taxis"]
+        taxis_init = deepcopy(self.initial["taxis"])
+        if (self.best_taxi_name is not None) and len(self.initial["taxis"].keys()) > 1:
+            taxis_init.pop(self.best_taxi_name)
+
         pass_loc = self.passengers_init[self.best_pass_name]['location']
 
         list_fuel = np.array([p_d['fuel'] for p_d in taxis_init.values()])
